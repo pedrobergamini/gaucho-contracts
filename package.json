@@ -1,0 +1,10 @@
+{
+  "name": "gaucho-contracts",
+  "version": "1.0.0",
+  "main": "index.js",
+  "author": "pedrobergamini <pedrohgbergamini@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "@openzeppelin/contracts": "^3.3.0"
+  }
+}
