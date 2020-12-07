@@ -2,17 +2,25 @@
 pragma solidity ^0.6.0;
 
 import '@openzeppelin/contracts/token/ERC20/ERC20.sol';
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
+import './interfaces/IMasterChef.sol';
 
-contract GauchoVault is ERC20 {
+/// @title Gaucho Vault liquidity token
+/// @author Pedro Bergamini
+/// @notice Gaucho.finance is in very early alpha and not production ready
+contract GauchoVault is ERC20('GauchoVault', 'GVAU') {
+  using SafeERC20 for IERC20;
+
   bool public isPaused;
 
   address public owner;
 
-  // Uniswap pair address
-  address public uniPool;
+  IERC20 public lpToken;
 
-  // Sushiswap pair address
-  address public sushiPool;
+  IMasterChef public masterchef;
+
+  uint public pid;
 
   modifier onlyOwner() {
     require(msg.sender == owner, 'Error: Not owner');
@@ -24,25 +32,49 @@ contract GauchoVault is ERC20 {
     _;
   }
 
-
-  constructor(address _uniPool, address _sushiPool, string name, string symbol, address _owner) public {
-    super(name, symbol);        
-    uniPool = _uniPool;
-    sushiPool = _sushiPool;
+  constructor(IERC20 _lpToken, IMasterChef _masterchef, uint _pid, address _owner) public {
+    lpToken = _lpToken;
     owner = _owner;
+    masterchef = _masterchef;
+    pid = _pid;
   }
 
+// @notice Triggers circuit breaker
   function setIsPaused(bool _isPaused) external onlyOwner {
     isPaused = _isPaused;
   }
 
-  function deposit() external notPaused {}
+  // @notice Deposits lp tokens and mints Vault shares
+  function deposit(uint _amount) external notPaused {
+    require(_amount > 0, 'Error: no 0 amount');
 
-  function withdraw() external notPaused {}
+    lpToken.safeTransferFrom(address(msg.sender), address(this), _amount);
+    masterchef.deposit(pid, _amount);
 
-  function harvestRewards() external notPaused {}
+    uint totalLpTokens = lpToken.balanceOf(address(this));
+    uint totalShares = totalSupply();
+    
+    if (totalShares == 0 || totalLpTokens == 0) {
+        _mint(msg.sender, _amount);
+    } 
+    
+    else {
+        uint amountToMint = _amount.mul(totalShares).div(totalLpTokens);
+        _mint(msg.sender, amountToMint);
+    }
+  }
 
-  function switchPool() external notPaused {}
+  // @notice Withdraw user lp tokens from MasterChef and burns his shares
+  function withdraw(uint _amount) external notPaused {
+    require(_amount > 0, 'Error: no 0 amount');
 
-  function getHigherAPY() public view returns (address) {}
+    uint256 totalShares = totalSupply();  
+    uint totalLpTokens = lpToken.balanceOf(address(this));  
+    uint256 amountToSend = _amount.mul(totalLpTokens).div(totalShares);
+    _burn(msg.sender, _amount);
+
+    masterchef.withdraw(pid, amountToSend);
+    lpToken.transfer(msg.sender, amountToSend);
+  }
+
 }
