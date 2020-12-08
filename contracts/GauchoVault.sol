@@ -2,8 +2,9 @@
 pragma solidity ^0.6.0;
 
 import '@openzeppelin/contracts/token/ERC20/ERC20.sol';
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
+import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
+import '@openzeppelin/contracts/math/SafeMath.sol';
 import './interfaces/IMasterChef.sol';
 
 /// @title Gaucho Vault liquidity token
@@ -11,6 +12,7 @@ import './interfaces/IMasterChef.sol';
 /// @notice Gaucho.finance is in very early alpha and not production ready
 contract GauchoVault is ERC20('GauchoVault', 'GVAU') {
   using SafeERC20 for IERC20;
+  using SafeMath for uint;
 
   bool public isPaused;
 
