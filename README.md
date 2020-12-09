@@ -1,5 +1,7 @@
 # Gaucho Finance 🚜 🚜
 
+![alt text](https://github.com/pedrobergamini/gaucho-contracts/blob/master/gauchointerface.png?raw=true)
+
 ### Gaucho finance is a sample DeFi project under development that automates yield farming on SushiSwap. It's still an experimental under development software and not production ready.
 
 ### Why Gaucho?
