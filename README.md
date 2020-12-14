@@ -15,4 +15,4 @@ Gaucho Finance implements two non-upgradeable smart contracts, which applies the
 
 ### Gaucho Frontend
 
-[a link](https://github.com/pedrobergamini/gaucho-interface)
+[click here](https://github.com/pedrobergamini/gaucho-interface)
