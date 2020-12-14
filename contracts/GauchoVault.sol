@@ -6,6 +6,7 @@ import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
 import '@openzeppelin/contracts/math/SafeMath.sol';
 import './interfaces/IMasterChef.sol';
+import './interfaces/IGauchoCaller.sol';
 
 /// @title Gaucho Vault liquidity token
 /// @author Pedro Bergamini
@@ -19,6 +20,8 @@ contract GauchoVault is ERC20('GauchoVault', 'GVAU') {
   address public owner;
 
   IERC20 public lpToken;
+
+  IERC20 public sushiToken;
 
   IMasterChef public masterchef;
 
@@ -34,8 +37,15 @@ contract GauchoVault is ERC20('GauchoVault', 'GVAU') {
     _;
   }
 
-  constructor(IERC20 _lpToken, IMasterChef _masterchef, uint _pid, address _owner) public {
+  event Deposit(address user, uint amount);
+
+  event Withdraw(address user, uint amount);
+
+  event FlashHarvest(address user, address userContract, uint amount);
+
+  constructor(IERC20 _lpToken, IERC20 _sushiToken, IMasterChef _masterchef, uint _pid, address _owner) public {
     lpToken = _lpToken;
+    sushiToken = _sushiToken;
     owner = _owner;
     masterchef = _masterchef;
     pid = _pid;
@@ -64,6 +74,8 @@ contract GauchoVault is ERC20('GauchoVault', 'GVAU') {
         uint amountToMint = _amount.mul(totalShares).div(totalLpTokens);
         _mint(msg.sender, amountToMint);
     }
+
+    emit Deposit(msg.sender, _amount);
   }
 
   // @notice Withdraw user lp tokens from MasterChef and burns his shares
@@ -77,6 +89,24 @@ contract GauchoVault is ERC20('GauchoVault', 'GVAU') {
 
     masterchef.withdraw(pid, amountToSend);
     lpToken.transfer(msg.sender, amountToSend);
+
+    emit Withdraw(msg.sender, _amount);
+  }
+
+  function flashHarvest(uint _amount, address _receiver, bytes calldata _data) external notPaused {
+    uint balance = sushiToken.balanceOf(address(this));
+    require(balance >= _amount, 'Error: not enough sushi balance');
+    
+    sushiToken.transfer(_receiver, _amount);
+    IGauchoCaller(_receiver).gauchoFlashHarvest(msg.sender, _amount, _data);
+    // requires amount and 0.3% fee to be paid
+    uint requiredBalance = balance.sub(_amount).add(_amount.div(10).mul(13));
+    uint balancePostExecution = sushiToken.balanceOf(address(this));
+    
+    // reverts if insufficient amount was returned after caller contract execution
+    require(balancePostExecution == requiredBalance, 'Error: Insufficient amount returned');
+
+    emit FlashHarvest(msg.sender, _receiver, _amount);
   }
 
 }

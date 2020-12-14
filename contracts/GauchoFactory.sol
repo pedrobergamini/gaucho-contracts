@@ -15,10 +15,13 @@ contract GauchoFactory is Ownable {
 
   IMasterChef public masterchef;
 
+  IERC20 public sushiToken;
+
   event VaultCreated(address indexed vaultAddress, address indexed lpToken);
 
-  constructor(IMasterChef _masterchef) public {
+  constructor(IMasterChef _masterchef, IERC20 _sushiToken) public {
     masterchef = _masterchef;
+    sushiToken = _sushiToken;
   }
 
   // @notice Returns vaults array length
@@ -28,7 +31,7 @@ contract GauchoFactory is Ownable {
 
   // @notice creates a new Vault contract
   function createVault(IERC20 _lpToken, uint _pid) external onlyOwner {
-    GauchoVault newVault = new GauchoVault(_lpToken, masterchef, _pid, owner());
+    GauchoVault newVault = new GauchoVault(_lpToken, sushiToken, masterchef, _pid, owner());
     allVaults.push(address(newVault));
     emit VaultCreated(address(newVault), address(_lpToken));
   }
