@@ -82,17 +82,21 @@ contract GauchoVault is ERC20('GauchoVault', 'GVAU') {
   function withdraw(uint _amount) external notPaused {
     require(_amount > 0, 'Error: no 0 amount');
 
-    uint256 totalShares = totalSupply();  
+    uint totalShares = totalSupply();  
     uint totalLpTokens = lpToken.balanceOf(address(this));  
-    uint256 amountToSend = _amount.mul(totalLpTokens).div(totalShares);
+    uint totalSushi = sushiToken.balanceOf(address(this)).add(masterchef.pendingSushi(pid, address(this)));
+    uint amountToSend = _amount.mul(totalLpTokens).div(totalShares);
+    uint sushiToSend = totalSushi.div(totalShares.div(balanceOf(msg.sender)));
     _burn(msg.sender, _amount);
 
     masterchef.withdraw(pid, amountToSend);
     lpToken.transfer(msg.sender, amountToSend);
+    sushiToken.transfer(msg.sender, sushiToSend);
 
     emit Withdraw(msg.sender, _amount);
   }
 
+  // @notice Inspired by flash loans concept, allow users to trade with vault's sushi balance
   function flashHarvest(uint _amount, address _receiver, bytes calldata _data) external notPaused {
     uint balance = sushiToken.balanceOf(address(this));
     require(balance >= _amount, 'Error: not enough sushi balance');
@@ -103,7 +107,7 @@ contract GauchoVault is ERC20('GauchoVault', 'GVAU') {
     uint requiredBalance = balance.sub(_amount).add(_amount.div(10).mul(13));
     uint balancePostExecution = sushiToken.balanceOf(address(this));
     
-    // reverts if insufficient amount was returned after caller contract execution
+    // reverts if insufficient amount was returned after caller's contract execution
     require(balancePostExecution == requiredBalance, 'Error: Insufficient amount returned');
 
     emit FlashHarvest(msg.sender, _receiver, _amount);
